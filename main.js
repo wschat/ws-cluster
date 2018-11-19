@@ -12,6 +12,7 @@ app.on('masterStart',w=>{
         app.fork();
     }
 })
+
 app.on('fork',(worker,master)=>{
     console.log(worker.id)
 })
