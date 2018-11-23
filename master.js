@@ -13,6 +13,11 @@ const WORKER_FORK_SIGNAL='worker_fork_signal';
 const WORKER_RELOAD_SIGNAL='worker_reload_signal';
 
 module.exports=class Main extends EventEmitter{
+    constructor(){
+        super();
+        this.forkCounts=0;
+        this.listeningCounts=0;
+    }
     /**
      * 启动
      */
@@ -32,10 +37,11 @@ module.exports=class Main extends EventEmitter{
         if(cluster.isMaster){
             let worker=cluster.fork();
             this[worker_bind_fun](worker);
-            
+            this.forkCounts++;
             if(isReaload){
                 this.emit('workerRealoadSuccess',worker)
             }
+            return worker;
         }else{
             process.send({signal:WORKER_FORK_SIGNAL})
         }
@@ -123,6 +129,7 @@ module.exports=class Main extends EventEmitter{
     [init_fun](){
         process.on('uncaughtException', (err) => {
             this.emit('error',err,cluster.isMaster?undefined:cluster.worker)
+            console.log(err)
         });
     }
 
@@ -132,17 +139,23 @@ module.exports=class Main extends EventEmitter{
      */
     [worker_bind_fun](worker){
         worker.on('message',(data)=>{
-            if(data&&data.signal===WORKER_FORK_SIGNAL){
-                this.fork();
-            }else if(data&&data.signal===WORKER_RELOAD_SIGNAL){
-                this.reload(data.workerId);
-            }else{
-                this.emit('message',data,worker)
+            if(!data)return;
+            switch(data.signal){
+                case WORKER_FORK_SIGNAL:
+                    this.fork();
+                    break;
+                case WORKER_RELOAD_SIGNAL:
+                    this.fork();
+                    break;
+
+                default:
+                    this.emit('message',data,worker);
+                    break;
             }
         });
         worker.on('listening',(address)=>{
-            this.emit('workerListening',worker)
-            console.log('workerListening',address)
+            this.listeningCounts++;
+            this.emit('workerListening',address,worker)
         });
         worker.on('error',(err)=>{
             this.emit('error',err,worker)
