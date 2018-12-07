@@ -1,4 +1,4 @@
-const {proxy,events} = require('./app')
+const {proxy,events} = require('./src/proxy')
 const cluster=require('cluster')
 const counts=require('os').cpus().length
 const fs=require('fs')
@@ -7,8 +7,7 @@ class Obj extends events{}
 const app=proxy(Obj);
 if(cluster.isMaster){
     app.on('workerEvent',data=>{
-        console.log(data)
-        this.emitEvents('workerEvent',data)
+        console.log('workerEvent',data)
     })
     const workers=[]
     for(let i=0;i<counts;i++){
@@ -59,6 +58,9 @@ if(cluster.isMaster){
             
         }
         
+    })
+    app.on('workerEvent',data=>{
+        console.log('workerEvent',data)
     })
     app.emit('workerEvent','触发于worker的event')
 }

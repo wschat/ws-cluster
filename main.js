@@ -1,7 +1,7 @@
 const cluster=require('cluster')
 const http=require('http')
 const os=require('os')
-var Master=require('./master')
+var Master=require('./src/cluster')
 var counts=os.cpus().length;
 var port=3001
 

@@ -7,7 +7,7 @@ const isAsyncMessage = Symbol('isAsyncMessage');
 /**
  * EventEmitter 代理器实现类需继承该类
  */
-exports.events = class App extends EventEmitter{
+exports.events = class Events extends EventEmitter{
     constructor(){
         super();
         this[isAsyncMessage]=false;
