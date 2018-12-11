@@ -2,26 +2,16 @@ const cluster=require('cluster')
 const EventEmitter = require('events');
 const report_signal = '_app_report_signal';
 const sync_signal = '_app_sync_signal';
+const isAsyncMessage = Symbol('isAsyncMessage');
 const stopPropagation = Symbol('stopPropagation');
-//const setEvent = Symbol('setEvent');
-const setEvent = 'setEvent';
-
+const setEvent = Symbol('setEvent');
 /**
  * EventEmitter 代理器实现类需继承该类
  */
 exports.events = class Events extends EventEmitter{
     constructor(){
         super();
-        if(cluster.isMaster){
-            cluster.on('message',(worker,data)=>{
-                this.onMessage(data,worker.id)
-            })
-        }else{
-            process.on('message',data=>{
-                this.onMessage(data,cluster.isMaster)
-            })
-        }
-        
+        this[isAsyncMessage]=false;
     }
     /**
      * process.on('message',data=>{
@@ -42,13 +32,18 @@ exports.events = class Events extends EventEmitter{
                 this.emitEvents(params.event,params.data,null,workerId)
                 return;
             }
-            this[params.key] = params.value;  //无法触发Proxy
+            //this[params.key] = params.value; // 这里的set 并未触发监听器
+            this.emit(setEvent,params.key,params.value)
+            console.log(data,this[params.key],cluster.isMaster)
         } else if (signal === sync_signal) {
             if (params.event) {
                 this.emit(params.event,stopPropagation, ...params.data);
                 return;
             }
-            this[params.key] = params.value; //无法触发Proxy
+            this[isAsyncMessage] = true;
+            this[params.key] = params.value;
+            //this[params.key] = params.value; // 这里的set 并未触发监听器
+            this.emit(setEvent,params.key,params.value)
         }else{
             this.emit('message',stopPropagation,data,workerId)
         }
@@ -90,21 +85,29 @@ exports.proxy = (Application,options={},...args) => {
         excludePrefix:'_'
     },options)
     return new Proxy(new Application(args), {
+        
         set(target, key, value, receiver) {
-            if (!Object.is(Reflect.get(target, key), value)) {
-                sync({key, value});
-                if (key.indexOf(options.excludePrefix) !== 0 && key instanceof Symbol===false) {
-                    report({ key, value });
+            if(key==='setW0Name')console.log(key,cluster.isMaster)
+            if (isAsyncMessage !== key) {
+                if (!Object.is(Reflect.get(target, key), value)) {
+                    sync({key, value});
+                    if (!Reflect.get(target, isAsyncMessage) && key.indexOf(options.excludePrefix) !== 0 && key instanceof Symbol===false) {
+                        report({ key, value });
+                    }
                 }
+                Reflect.set(target, isAsyncMessage, false)
             }
             return Reflect.set(target, key, value, receiver)
         },
         deleteProperty(target, key) {
-            if (Reflect.get(target, key) !== undefined) {
-                sync({ key, value:undefined});
-                if (target[key] !== undefined) {
-                    report({ key, value: undefined });
+            if (isAsyncMessage !== key) {
+                if (Reflect.get(target, key) !== undefined) {
+                    sync({ key, value:undefined});
+                    if (!Reflect.get(target, isAsyncMessage) && target[key] !== undefined) {
+                        report({ key, value: undefined });
+                    }
                 }
+                Reflect.set(target, isAsyncMessage, false)
             }
             return Reflect.deleteProperty(target, key);
         }
