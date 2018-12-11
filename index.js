@@ -32,17 +32,18 @@ if(cluster.isMaster){
             type:'get',
             key:'myName'
         });
-        setTimeout(_=>{
-            console.log(app.setW0Name)
+        // setTimeout(_=>{
+        //     console.log(app.setW0Name)
         
-            workers[3].send({
-                type:'get',
-                key:'setW0Name'
-            });
-        },100)
+        //     workers[3].send({
+        //         type:'get',
+        //         key:'setW0Name'
+        //     });
+        // },100)
         
     }
 }else{
+    
     process.on('message',data=>{
         if(data.signal){
             app.onMessage(data)
@@ -52,15 +53,15 @@ if(cluster.isMaster){
                 process.send(app[data.key])
             }
         }else if(data.type==='set'){
+            app.emit('workerEvent','触发于worker的event')
             if(data.key){
                 app[data.key]=data.value;
             }
             
         }
         
+        
+        
     })
-    app.on('workerEvent',data=>{
-        console.log('workerEvent',data)
-    })
-    app.emit('workerEvent','触发于worker的event')
+    
 }

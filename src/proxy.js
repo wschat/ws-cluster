@@ -3,6 +3,7 @@ const EventEmitter = require('events');
 const report_signal = '_app_report_signal';
 const sync_signal = '_app_sync_signal';
 const isAsyncMessage = Symbol('isAsyncMessage');
+const stopPropagation = Symbol('stopPropagation');
 
 /**
  * EventEmitter 代理器实现类需继承该类
@@ -24,14 +25,14 @@ exports.events = class Events extends EventEmitter{
         if(!signal||!params)return;
         if (signal === report_signal) {
             if (params.event){
-                this.emit(params.event,...params.data);
+                this.emit(params.event,stopPropagation,...params.data);
                 this.emitEvents(params.event,params.data,null,workerId)
                 return;
             }
             this[params.key] = params.value;
         } else if (signal === sync_signal) {
             if (params.event) {
-                this.emit(params.event, ...params.data);
+                this.emit(params.event,stopPropagation, ...params.data);
                 return;
             }
             this[isAsyncMessage] = true;
@@ -50,7 +51,13 @@ exports.events = class Events extends EventEmitter{
     emitEvents(event, data, worker, workerId){
         sync({ event, data }, worker, workerId)
         report({event,data})
-        this.emit('nextTixk');
+    }
+    emit(event,type,...args){
+        if(type!==stopPropagation){
+            args.unshift(type);
+            this.emitEvents(event,args);
+        }
+        super.emit(event,...args)
     }
 } 
 
