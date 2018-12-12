@@ -1,154 +1,35 @@
+const {proxy,events} = require('./src/proxy')
+const {inherits} = require('util')
 const cluster=require('cluster')
-const EventEmitter = require('events');
-const report_signal = '_app_report_signal';
-const sync_signal = '_app_sync_signal';
-const isAsyncMessage = Symbol('isAsyncMessage');
-const stopPropagation = Symbol('stopPropagation');
-const setEvent = Symbol('setEvent');
-/**
- * EventEmitter 代理器实现类需继承该类
- */
-exports.events = class Events extends EventEmitter{
-    constructor(){
-        super();
-        this[isAsyncMessage]=false;
-    }
-    /**
-     * process.on('message',data=>{
-     *  this.onMessage(data);
-     * })
-     * @param {object} data { signal, params }
-     * @param {null || string || integer} workerId 接收的worker消息的所属ID
-     */
-    onMessage(data,workerId) {
-        let { signal, params }=data;
-        if(!signal||!params){
-            this.emit('message',stopPropagation,data,workerId)
-            return;
-        }
-        if (signal === report_signal) {
-            if (params.event){
-                this.emit(params.event,stopPropagation,...params.data);
-                this.emitEvents(params.event,params.data,null,workerId)
-                return;
-            }
-            //this[params.key] = params.value; // 这里的set 并未触发监听器
-            this.emit(setEvent,params.key,params.value)
-            console.log(data,this[params.key],cluster.isMaster)
-        } else if (signal === sync_signal) {
-            if (params.event) {
-                this.emit(params.event,stopPropagation, ...params.data);
-                return;
-            }
-            this[isAsyncMessage] = true;
-            this[params.key] = params.value;
-            //this[params.key] = params.value; // 这里的set 并未触发监听器
-            this.emit(setEvent,params.key,params.value)
-        }else{
-            this.emit('message',stopPropagation,data,workerId)
-        }
-    }
-    /**
-     * this.on('***',(...args)=>{
-     *  this.emitEvents('***',args)
-     * })
-     * @param {string} event 
-     * @param {object} data 触发Events时传输的数据
-     * @param {null || object} worker 需要指定触发events的worker
-     * @param {null || string || integer} workerId 需要指定触发events的worker的ID
-     */
-    emitEvents(event, data, worker, workerId){
-        sync({ event, data }, worker, workerId)
-        report({event,data})
-    }
-    emit(event,type,...args){
-        if(type!==stopPropagation){
-            args.unshift(type);
-            this.emitEvents(event,args);
-        }
-        if(event===setEvent){
-            this[args[0]]=args[1];
-            return;
-        }
-        super.emit(event,...args)
-    }
-} 
+const counts=require('os').cpus().length
+const fs=require('fs')
 
-/**
- * 属性代理器 （代理的属性仅包含非 Symbol的基础类型属性和 Array , Object 引用类型）
- * @param  {class}  Application 需要代理的类
- * @param  {object} options     代理器配置 {excludePrefix : '排除代理的属性前缀'}
- * @param  {mixed}  ...args     Application实例参数（可在constructor中接收的参数）
- */
-exports.proxy = (Application,options={},...args) => {
-    options=Object.assign({
-        excludePrefix:'_'
-    },options)
-    return new Proxy(new Application(args), {
-        
-        set(target, key, value, receiver) {
-            if(key==='setW0Name')console.log(key,cluster.isMaster)
-            if (isAsyncMessage !== key) {
-                if (!Object.is(Reflect.get(target, key), value)) {
-                    sync({key, value});
-                    if (!Reflect.get(target, isAsyncMessage) && key.indexOf(options.excludePrefix) !== 0 && key instanceof Symbol===false) {
-                        report({ key, value });
-                    }
-                }
-                Reflect.set(target, isAsyncMessage, false)
-            }
-            return Reflect.set(target, key, value, receiver)
-        },
-        deleteProperty(target, key) {
-            if (isAsyncMessage !== key) {
-                if (Reflect.get(target, key) !== undefined) {
-                    sync({ key, value:undefined});
-                    if (!Reflect.get(target, isAsyncMessage) && target[key] !== undefined) {
-                        report({ key, value: undefined });
-                    }
-                }
-                Reflect.set(target, isAsyncMessage, false)
-            }
-            return Reflect.deleteProperty(target, key);
-        }
+class Obj extends events{}
 
-    })
+var p = new Proxy(Obj, {
+    
+    construct: function(target, args,newTarget) {
+        console.log('called: ',typeof target);
+        var app=new Proxy(new target(...args),{
+            set: function(obj, prop, value, receiver) {
+                obj[prop] = receiver;
+                // 无论有没有下面这一行，都会报错
+                console.log('set...',prop,value)
+                return true;
+            },
+        });
+        return app
+    },
     
     
-}
+});
 
-/**
- * 上报信息
- * @param {object} params {key,value} or {event,data}
- */ 
-function report(params) {
-    if (cluster.isMaster) return;
-    process.send({
-        signal: report_signal,
-        params
-    })
-}
-/**
- * 同步信息
- * @param {object} params {key,value} or {event,data}
- * @param {object} worker 须同步的worker
- * @param {string || integer} excludeId 排除的workerId 
- */
-function sync(params, worker,excludeId) {
-    if (cluster.isWorker) return;
-    if (worker) {
-        worker.send({
-            signal: sync_signal,
-            params
-        })
-        return;
-    }
-    let workers = cluster.workers;
-    for (let i in workers) {
-        if (excludeId==i)continue;
-        workers[i].send({
-            signal: sync_signal,
-            params
-        })
-    }
-}
+var a=new p();
+a.aa='1123';
+a.on('aa',_=>{
+    console.log('on aa')
+})
+a.emit('aa',{})
+
+
+ 
