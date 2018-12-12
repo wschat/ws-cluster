@@ -4,7 +4,6 @@ const assert = require('assert').strict
 const { EventEmitter } = require('events')
 
 const get_worker_fun = Symbol('_getWorker');
-const init_fun = Symbol('init');
 const master_fun = Symbol('master');
 const worker_fun = Symbol('worker');
 const worker_bind_fun = Symbol('worker_bind');
@@ -62,7 +61,12 @@ module.exports = class Main extends EventEmitter {
             if (reload) {
                 worker[WORKER_REALOD] = true;
             }
-            worker.process.kill('SIGINT');
+            worker.kill('SIGINT'); // windows don't support SIGQUIT
+            setTimeout(_=>{
+                if(!worker.isConnected()) return;
+                worker.process.kill('SIGINT');
+            }, 100);
+            //worker.process.kill('SIGINT');
         } else {
             this.emit('kill');
             process.kill(process.pid, 'SIGINT');
@@ -120,7 +124,6 @@ module.exports = class Main extends EventEmitter {
      * 主进程开始
      */
     [master_fun]() {
-        this[init_fun]();
         this.emit('masterStart');
     }
 
@@ -128,18 +131,7 @@ module.exports = class Main extends EventEmitter {
      * 子进程开始
      */
     [worker_fun]() {
-        this[init_fun]();
         this.emit('workerStart', cluster.worker)
-    }
-
-    /**
-     * 进程初始化
-     */
-    [init_fun]() {
-        process.on('uncaughtException', (err) => {
-            this.emit('error', err, cluster.isMaster ? undefined : cluster.worker)
-            console.log(err)
-        });
     }
 
     /**

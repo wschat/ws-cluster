@@ -1,14 +1,26 @@
 {
   "name": "ws-cluster",
   "version": "1.0.0",
-  "description": "",
+  "description": "Node多进程管理、多进程间基础属性同步、EventEmitter同步",
   "main": "index.js",
+  "homepage": "https://github.com/wschat/ws-cluster/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wschat/ws-cluster/"
+  },
+  "bugs": {
+    "url": "https://github.com/wschat/ws-cluster/issues"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cluster":"node ./example/cluster-master.js",
+    "events":"node ./example/proxy-events.js",
+    "sync":"node ./example/proxy-sync.js",
+    "report":"node ./example/proxy-report.js"
   },
   "engines": {
     "node":">=10.0.0"
   },
-  "author": "",
+  "author": "wschat",
   "license": "ISC"
 }
