@@ -1,17 +1,14 @@
 # ws-cluster-proxy
-<br>
 
 ## 介绍
 
 ```cluster```的封装、提供父子进程间的基本数据的共享以及```EventEmitter```事件的共享
 
-<br>
 
 ## cluster 类
 * 多进程管理类
 * [实例参考](./example/cluster-master.js)
 
-<br>
 
 ### new cluster(void)
     
