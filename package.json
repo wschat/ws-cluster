@@ -13,14 +13,15 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "cluster":"node ./example/cluster-master.js",
-    "events":"node ./example/proxy-events.js",
-    "sync":"node ./example/proxy-sync.js",
-    "report":"node ./example/proxy-report.js"
+    "cluster": "node ./example/cluster-master.js",
+    "events": "node ./example/proxy-events.js",
+    "sync": "node ./example/proxy-sync.js",
+    "report": "node ./example/proxy-report.js"
   },
   "engines": {
-    "node":">=10.0.0"
+    "node": ">=10.0.0"
   },
   "author": "wschat",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {}
 }
