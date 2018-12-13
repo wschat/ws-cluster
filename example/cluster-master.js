@@ -52,7 +52,7 @@ master.on('workerClose',worker=>{
     console.log('workerClose')
 })
 
-// 每一个worker启动成功时
+// 每一个worker重启成功时
 master.on('workerRealoadSuccess',worker=>{
     console.log('workerRealoadSuccess')
 })

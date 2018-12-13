@@ -1,5 +1,5 @@
 {
-  "name": "ws-cluster",
+  "name": "ws-cluster-proxy",
   "version": "1.0.0",
   "description": "Node多进程管理、多进程间基础属性同步、EventEmitter同步",
   "main": "index.js",
