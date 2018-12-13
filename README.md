@@ -1,8 +1,14 @@
 # ws-cluster-proxy
 
+
+
 ## 介绍
 
 ```cluster```的封装、提供父子进程间的基本数据的共享以及```EventEmitter```事件的共享
+
+```
+npm install  --save ws-cluster-proxy
+```
 
 
 ## cluster 类
